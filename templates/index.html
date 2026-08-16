@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FILE INTEL — Compression Unit</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&family=IBM+Plex+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --manila: #d4bc89;
+  --manila2: #c4a96a;
+  --manila3: #b8984f;
+  --paper: #e8d9b4;
+  --ink: #1c1409;
+  --green: #2d5a1b;
+  --green2: #3d7a25;
+  --red-stamp: #8b1a1a;
+  --red2: #a82020;
+  --fade: #6b5a38;
+  --rule: rgba(28,20,9,0.2);
+  --shadow: rgba(28,20,9,0.35);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #2a2016;
+  font-family: 'IBM Plex Mono', monospace;
+  min-height: 100vh;
+  background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 1px, transparent 1px, transparent 4px);
+}
+
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.folder-wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  background: var(--manila);
+  min-height: 100vh;
+  position: relative;
+  box-shadow: 0 0 80px rgba(0,0,0,0.7);
+}
+
+.folder-wrap::before {
+  content: '';
+  position: absolute;
+  top: -22px; left: 40px;
+  width: 160px; height: 24px;
+  background: var(--manila2);
+  border-radius: 4px 4px 0 0;
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,0.15);
+}
+
+.folder-wrap::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(-45deg, transparent, transparent 12px, rgba(0,0,0,0.018) 12px, rgba(0,0,0,0.018) 13px);
+  pointer-events: none;
+}
+
+.header {
+  padding: 2rem 2.5rem 1.2rem;
+  border-bottom: 3px double var(--ink);
+  position: relative;
+  z-index: 5;
+}
+
+.header-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.agency-block { min-width: 220px; }
+.agency-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(2.4rem, 5vw, 4.2rem);
+  line-height: 0.9;
+  color: var(--ink);
+  letter-spacing: 0.04em;
+}
+
+.agency-name em {
+  display: block;
+  font-style: normal;
+  font-size: 0.38em;
+  letter-spacing: 0.18em;
+  color: var(--green);
+  margin-top: 0.15em;
+}
+
+.content {
+  padding: 2.2rem 2.5rem 2.5rem;
+  position: relative;
+  z-index: 5;
+}
+
+.dossier-row {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.6rem;
+}
+
+.dossier {
+  width: min(100%, 760px);
+  background: var(--paper);
+  border: 1px solid var(--manila3);
+  padding: 1.2rem;
+  position: relative;
+  box-shadow: 2px 3px 8px var(--shadow);
+}
+
+.dossier::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 0; height: 0;
+  border-style: solid;
+  border-width: 0 18px 18px 0;
+  border-color: transparent var(--manila) transparent transparent;
+}
+
+.dossier-tag {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.25em;
+  color: var(--fade);
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.8rem;
+}
+
+.dossier-tag::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--rule);
+}
+
+.dossier-num {
+  display: inline-block;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.75rem;
+  padding: 0 7px;
+  letter-spacing: 0.1em;
+}
+
+.upload-drop {
+  border: 2px dashed var(--manila3);
+  min-height: 250px;
+  padding: 2rem 1rem;
+  text-align: center;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+  background: rgba(255,255,255,0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.upload-drop:hover, .upload-drop.over {
+  border-color: var(--green2);
+  background: rgba(45,90,27,0.06);
+}
+
+.upload-drop input {
+  position: absolute; inset: 0;
+  opacity: 0; cursor: pointer;
+  width: 100%; height: 100%;
+}
+
+/* Keep text/icon from stealing clicks away from the hidden file input */
+.upload-drop > :not(input) {
+  pointer-events: none;
+}
+
+.upload-icon {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 0.5rem;
+  filter: grayscale(0.5) sepia(0.3);
+}
+
+.upload-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.78rem;
+  color: var(--ink);
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.upload-hint {
+  font-size: 0.62rem;
+  color: var(--fade);
+  letter-spacing: 0.05em;
+}
+
+.file-loaded {
+  display: none;
+  margin-top: 0.8rem;
+  background: var(--ink);
+  color: #c8d8b0;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.68rem;
+  font-family: 'Share Tech Mono', monospace;
+  letter-spacing: 0.05em;
+  line-height: 1.7;
+  width: 100%;
+}
+
+.file-loaded .fn { color: #a8e870; font-weight: 500; }
+
+.analyse-wrap {
+  text-align: center;
+  margin-bottom: 1.2rem;
+}
+
+.compress-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  margin-top: 0.9rem;
+}
+
+.size-group {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.35rem;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+}
+
+.size-input {
+  width: 120px;
+  padding: 0.38rem 0.6rem;
+  border: 1px solid rgba(28,20,9,0.45);
+  background: rgba(255,255,255,0.72);
+  color: var(--ink);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 1rem;
+}
+
+.size-unit {
+  display: inline-block;
+  min-width: 42px;
+  padding: 0.38rem 0.55rem;
+  background: rgba(28,20,9,0.55);
+  color: var(--paper);
+  font-size: 1rem;
+}
+
+.analyse-btn {
+  min-width: 360px;
+  width: min(100%, 420px);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.4rem;
+  letter-spacing: 0.2em;
+  color: var(--paper);
+  background: var(--green);
+  border: none;
+  padding: 0.8rem 3rem;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.2s, transform 0.1s;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.analyse-btn:hover { background: var(--green2); transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--ink); }
+.analyse-btn:active { transform: translate(1px,1px); box-shadow: 2px 2px 0 var(--ink); }
+.analyse-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: 3px 3px 0 var(--ink); }
+
+.alert {
+  display: none;
+  padding: 0.7rem 1rem;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  margin: 0 auto 1rem;
+  border-left: 4px solid;
+  max-width: 760px;
+}
+
+.alert-err { background: rgba(139,26,26,0.08); border-color: var(--red-stamp); color: var(--red2); }
+.alert-ok { background: rgba(45,90,27,0.08); border-color: var(--green); color: var(--green); }
+
+.loading-text {
+  display: none;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--green2);
+  letter-spacing: 0.15em;
+  text-align: center;
+  margin-top: 0.8rem;
+  animation: blink 0.8s step-end infinite;
+}
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+.status-card {
+  max-width: 760px;
+  margin: 0 auto;
+  background: rgba(28,20,9,0.08);
+  border: 1px solid rgba(28,20,9,0.12);
+  padding: 1rem 1.1rem;
+  font-family: 'Share Tech Mono', monospace;
+  color: var(--ink);
+  line-height: 1.7;
+  display: none;
+}
+
+.status-card strong { color: var(--green); }
+
+.header-line {
+  font-size: 0.62rem;
+  color: var(--fade);
+  letter-spacing: 0.08em;
+  text-align: center;
+  margin-top: 0.1rem;
+}
+
+@media (max-width: 740px) {
+  .header, .content { padding-left: 1rem; padding-right: 1rem; }
+  .dossier { width: 100%; }
+  .analyse-btn { min-width: 0; width: 100%; }
+  .upload-drop { min-height: 220px; }
+}
+</style>
+</head>
+<body>
+<div class="folder-wrap">
+  <div class="header">
+    <div class="header-top">
+      <div class="agency-block">
+        <div class="agency-name">
+          FILE<br>INTEL
+        </div>
+      </div>
+    </div>
+    <div class="double-rule"></div>
+    <div class="header-line">COMPRESSION UNIT</div>
+  </div>
+
+  <div class="content">
+    <div class="dossier-row">
+      <div class="dossier">
+        <div class="dossier-tag">
+          <span class="dossier-num">SUBJ-A</span>
+          Archive to Compress
+        </div>
+        <div class="upload-drop" id="drop-a">
+          <input type="file" id="file-a" accept=".zip,.rar,.tar,.tgz,.tar.gz,.tbz2,.txz">
+          <span class="upload-icon">🗂️</span>
+          <span class="upload-label">Drop archive here</span>
+          <span class="upload-hint">ZIP, RAR, or TAR — max 200000000</span>
+        </div>
+        <div class="file-loaded" id="loaded-a">
+          <div>STATUS: <span class="fn" id="name-a">—</span></div>
+          <div>SIZE:   <span id="size-a">—</span></div>
+          <div>TYPE:   <span id="type-a">—</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="analyse-wrap">
+      <div class="alert alert-err" id="err-box"></div>
+      <div class="alert alert-ok" id="ok-box"></div>
+      <button class="analyse-btn" id="analyse-btn" onclick="compressFile()">⬛ Begin Compression</button>
+      <div class="compress-controls">
+        <div class="size-group">
+          <span>Size:</span>
+          <input class="size-input" id="target-size" type="number" min="1" max="200000000" value="100000" aria-label="Target size">
+          <span class="size-unit">Limit</span>
+        </div>
+      </div>
+      <div class="loading-text" id="loading-text">▌ COMPRESSING FILE...</div>
+    </div>
+
+    <div class="status-card" id="status-card"></div>
+  </div>
+</div>
+
+<script>
+function setupDrop(dropId, inputId, loadedId, nameId, sizeId, typeId) {
+  const drop = document.getElementById(dropId);
+  const inp = document.getElementById(inputId);
+  if (!drop || !inp) return;
+
+  // Open picker when clicking anywhere in the box.
+  drop.addEventListener('click', () => inp.click());
+
+  inp.addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (f) showLoaded(f, loadedId, nameId, sizeId, typeId);
+  });
+
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+  drop.addEventListener('drop', e => {
+    e.preventDefault(); drop.classList.remove('over');
+    const f = e.dataTransfer.files[0];
+    if (f) {
+      const dt = new DataTransfer();
+      dt.items.add(f);
+      inp.files = dt.files;
+      showLoaded(f, loadedId, nameId, sizeId, typeId);
+    }
+  });
+}
+
+function showLoaded(f, loadedId, nameId, sizeId, typeId) {
+  document.getElementById(nameId).textContent = f.name;
+  document.getElementById(sizeId).textContent = String(f.size);
+  document.getElementById(typeId).textContent = f.name.split('.').pop().toUpperCase();
+  document.getElementById(loadedId).style.display = 'block';
+}
+
+setupDrop('drop-a', 'file-a', 'loaded-a', 'name-a', 'size-a', 'type-a');
+
+async function compressFile() {
+  const file = document.getElementById('file-a').files[0];
+  const targetSize = document.getElementById('target-size').value || '100000';
+  const errBox = document.getElementById('err-box');
+  const okBox = document.getElementById('ok-box');
+  const loading = document.getElementById('loading-text');
+  const button = document.getElementById('analyse-btn');
+  const statusCard = document.getElementById('status-card');
+
+  errBox.style.display = 'none';
+  okBox.style.display = 'none';
+  statusCard.style.display = 'none';
+
+  if (!file) {
+    errBox.textContent = 'Please choose one archive file before compression.';
+    errBox.style.display = 'block';
+    return;
+  }
+
+  loading.style.display = 'block';
+  button.disabled = true;
+
+  const formData = new FormData();
+  formData.append('file_a', file);
+  formData.append('target_size', targetSize);
+
+  try {
+    const response = await fetch('/compress', { method: 'POST', body: formData });
+
+    if (!response.ok) {
+      let message = 'Compression failed';
+      try {
+        const data = await response.json();
+        if (data && data.error) message = data.error;
+      } catch (_) {}
+      throw new Error(message);
+    }
+
+    const blob = await response.blob();
+    const cd = response.headers.get('Content-Disposition') || '';
+    const match = cd.match(/filename="?([^";]+)"?/i);
+    const downloadName = match ? match[1] : 'compressed.zip';
+    const actualBytes = Number(response.headers.get('X-Compressed-Bytes') || blob.size || 0);
+    const targetBytes = Number(response.headers.get('X-Target-Bytes') || Number(targetSize));
+    const withinTarget = actualBytes > 0 && targetBytes > 0 ? actualBytes <= targetBytes : true;
+
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = downloadName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+
+    okBox.textContent = 'Compressed ZIP created successfully: ' + downloadName;
+    okBox.style.display = 'block';
+    statusCard.innerHTML = withinTarget
+      ? '<strong>DONE:</strong> Your ZIP download has started.'
+      : '<strong>NOTE:</strong> The compressed ZIP is larger than the target size, but the download has started.';
+    statusCard.style.display = 'block';
+  } catch (err) {
+    errBox.textContent = '⚠ ' + (err.message || String(err));
+    errBox.style.display = 'block';
+  } finally {
+    loading.style.display = 'none';
+    button.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
